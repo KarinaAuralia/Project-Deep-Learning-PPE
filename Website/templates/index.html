@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kelompok 4 — PPE Compliance Monitor</title>
+
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ink:   { 900:'#0f172a', 700:'#334155', 500:'#64748b', 300:'#cbd5e1', 100:'#f1f5f9' },
+        brand: { 50:'#eff6ff', 100:'#dbeafe', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' },
+        ok:    { 500:'#10b981', 600:'#059669' },
+        bad:   { 500:'#ef4444', 600:'#dc2626' },
+        paper: '#ffffff'
+      },
+      fontFamily: { sans: ['Poppins','sans-serif'] },
+      boxShadow: {
+        soft: '0 4px 20px -6px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04)',
+        card: '0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05)'
+      }
+    }
+  }
+};
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 400px);
+    font-family:'Poppins',sans-serif;
+    min-height: 100vh;
+  }
+  .hairline { border-color:#e2e8f0; }
+  .num { font-variant-numeric: tabular-nums; }
+  .lbl { letter-spacing:.14em; text-transform:uppercase; font-size:11px; font-weight:700; }
+  .sec-num {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: #2563eb;
+  }
+</style>
+</head>
+<body class="text-ink-900 antialiased">
+
+<!-- ============ NAV ============ -->
+<header class="border-b hairline bg-white/90 backdrop-blur sticky top-0 z-40 shadow-card">
+  <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+    <a href="#beranda" class="font-extrabold text-[16px] tracking-tight flex items-center gap-2">
+      <span class="w-7 h-7 rounded-lg bg-brand-600 text-white grid place-items-center text-[12px]">4</span>
+      KELOMPOK 4
+    </a>
+    <nav class="flex items-center gap-1 text-[13px] font-medium">
+      <a href="#beranda" class="px-3.5 py-2 rounded-lg hover:text-brand-600 hover:bg-brand-50 transition-colors">Beranda</a>
+      <a href="#tim"     class="px-3.5 py-2 rounded-lg hover:text-brand-600 hover:bg-brand-50 transition-colors">Tim</a>
+      <a href="#test"    class="px-3.5 py-2 rounded-lg hover:text-brand-600 hover:bg-brand-50 transition-colors">Test</a>
+      <a href="#akurasi" class="px-3.5 py-2 rounded-lg hover:text-brand-600 hover:bg-brand-50 transition-colors">Akurasi</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ 01 — BERANDA ============ -->
+<section id="beranda" class="max-w-6xl mx-auto px-6 pt-16 pb-16">
+
+  <div class="grid grid-cols-12 gap-10 items-start">
+    <div class="col-span-12 lg:col-span-7">
+      <h1 class="font-extrabold text-[34px] sm:text-[46px] leading-[1.1] tracking-tight">
+        Deteksi Kepatuhan Penggunaan APD<br/>
+        Kru Lapangan Berbasis<br/>
+        <span class="text-brand-600">YOLO</span>
+      </h1>
+      <p class="mt-7 text-[15px] leading-relaxed text-ink-700 max-w-xl">
+      Sistem ini mendeteksi penggunaan mask, vest, gloves, hard hat, dan safety
+      boots pada kru di area kerja melalui foto, kemudian mengidentifikasi ketidaksesuaian
+      penggunaan APD.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#test" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-[13px] font-semibold px-6 py-3 rounded-xl shadow-soft transition-all">
+          Analisis →
+        </a>
+        <a href="#tim" class="inline-flex items-center gap-2 text-[13px] font-semibold px-6 py-3 rounded-xl border hairline bg-white hover:border-brand-500 hover:text-brand-600 transition-colors">
+          Lihat Tim
+        </a>
+      </div>
+    </div>
+
+    <aside class="col-span-12 lg:col-span-5 lg:pl-10 lg:border-l hairline">
+      <div class="lbl text-ink-500 mb-4">Spesifikasi Model</div>
+      <table class="w-full text-[13px]">
+        <tbody class="divide-y hairline">
+          <tr><td class="py-2.5 text-ink-500">Arsitektur</td><td class="py-2.5 text-right font-medium">YOLOv11s</td></tr>
+          <tr><td class="py-2.5 text-ink-500">Framework</td><td class="py-2.5 text-right font-medium">Ultralytics + PyTorch</td></tr>
+          <tr><td class="py-2.5 text-ink-500">Kelas deteksi</td><td class="py-2.5 text-right font-medium num">6</td></tr>
+          <tr><td class="py-2.5 text-ink-500">mAP@0.5</td><td class="py-2.5 text-right font-semibold text-brand-600 num">90.1%</td></tr>
+          <tr><td class="py-2.5 text-ink-500">Input</td><td class="py-2.5 text-right font-medium num">640 × 640 RGB</td></tr>
+        </tbody>
+      </table>
+      <div class="mt-6 p-4 border hairline rounded-xl bg-brand-50/50">
+        <div class="lbl text-ink-500 mb-2">Kelas APD</div>
+        <div class="flex flex-wrap gap-1.5 text-[11px]">
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Mask</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Vest</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Person</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Gloves</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Hard_hat</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Safety_boots</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 02 — TIM ============ -->
+<section id="tim" class="border-t hairline bg-white">
+  <div class="max-w-6xl mx-auto px-6 py-16">
+    <div class="flex items-center gap-4 mb-12">
+      <span class="sec-num">02</span>
+      <span class="h-px flex-1 bg-ink-300/70"></span>
+      <span class="lbl text-ink-500">Kelompok 4</span>
+    </div>
+
+    <h2 class="font-extrabold text-[32px] sm:text-[40px] tracking-tight mb-12">
+      Tim Pengembang
+    </h2>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {% for m in team %}
+      <article class="relative h-full bg-white border hairline rounded-2xl px-4 py-6 text-center flex flex-col items-center shadow-card hover:shadow-soft hover:border-brand-500 transition-all">
+
+        {% if loop.first %}
+        <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-brand-600 text-white text-[10px] font-semibold tracking-wide whitespace-nowrap shadow-sm">
+          Ketua Kelompok
+        </span>
+        {% endif %}
+
+        <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-brand-100 bg-ink-100 mb-3 shrink-0">
+          <img src="{{ url_for('static', filename='team/' + m.foto) }}"
+               alt="{{ m.nama }}" class="w-full h-full object-cover"
+               onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'w-full h-full grid place-items-center font-bold text-brand-600 text-[20px]',textContent:'{{ m.initsial }}'}))"/>
+        </div>
+
+        <h3 class="font-bold text-[13px] text-ink-900 leading-tight">{{ m.nama }}</h3>
+        <p class="text-[10px] text-ink-500 num mt-1">NPM {{ m.nim }}</p>
+        <p class="text-[11px] text-ink-500 mt-3 leading-snug">{{ m.peran }}</p>
+
+        <a href="{{ m.linkedin }}" target="_blank" rel="noopener"
+           class="mt-auto pt-4">
+          <span class="w-[96px] inline-flex items-center justify-center px-3.5 py-1.5 rounded-full border border-brand-200 bg-brand-50 text-brand-600 text-[11px] font-semibold hover:bg-brand-600 hover:text-white hover:border-brand-600 transition-colors">
+            LinkedIn
+          </span>
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 — TEST ============ -->
+<section id="test" class="border-t hairline">
+  <div class="max-w-6xl mx-auto px-6 py-16">
+
+    <div class="flex items-center gap-4 mb-12">
+      <span class="sec-num">03</span>
+      <span class="h-px flex-1 bg-ink-300/70"></span>
+      <span class="lbl text-ink-500">Simulasi</span>
+    </div>
+
+    <h2 class="font-extrabold text-[32px] sm:text-[40px] tracking-tight mb-3">
+      Simulasi & Uji Deteksi APD
+    </h2>
+    <p class="text-[15px] text-ink-500 mb-10 max-w-2xl">
+      Pilih salah satu <b>sample</b> yang tersedia atau unggah foto
+      lapangan untuk menguji deteksi APD dan melihat status kepatuhan setiap pekerja.
+    </p>
+
+    <div class="grid grid-cols-12 gap-8 items-start">
+
+      <!-- ============ KOLOM KIRI: Sample + Upload ============ -->
+      <div class="col-span-12 lg:col-span-5 space-y-8">
+
+        <!-- Sample -->
+        <div>
+          <div class="lbl text-ink-500 mb-3">Sample Data</div>
+          <div class="grid grid-cols-3 gap-2">
+            {% for s in samples %}
+            <a href="{{ url_for('try_sample', sample_file=s.file) }}"
+               class="flex flex-col items-center text-center bg-white border hairline rounded-xl
+                      px-3 py-4 transition-all hover:border-brand-500 hover:shadow-soft group">
+              <span class="w-7 h-7 rounded-full border border-brand-200 bg-brand-50 grid place-items-center
+                           text-[11px] font-bold text-brand-600 num mb-2
+                           group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition-colors">
+                {{ loop.index }}
+              </span>
+              <div class="text-[12px] font-semibold leading-tight">{{ s.label }}</div>
+              <div class="text-[10px] text-ink-500 mt-1">{{ s.sub }}</div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Upload -->
+        <div>
+          <div class="lbl text-ink-500 mb-3">Atau Unggah Foto</div>
+          <form action="/analyze" method="post" enctype="multipart/form-data" class="space-y-3">
+            <label class="block border-2 border-dashed border-brand-200 hover:border-brand-500
+                          bg-brand-50/40 rounded-xl transition-colors cursor-pointer">
+              <input type="file" name="image" accept="image/*" required class="hidden" id="file-input">
+              <div class="p-8 text-center">
+                <div class="text-[28px] text-brand-500 mb-2">⬆</div>
+                <div class="text-[13px] font-medium text-ink-700" id="file-label">
+                  Klik untuk memilih foto
+                </div>
+                <div class="text-[10px] text-ink-500 mt-1">JPG / PNG · maks ~10 MB</div>
+              </div>
+            </label>
+            <button type="submit"
+                    class="w-full bg-brand-600 hover:bg-brand-700 text-white text-[13px]
+                           font-semibold py-3 rounded-xl shadow-soft transition-all">
+              Analisis
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- ============ KOLOM KANAN: Hasil ============ -->
+      <div class="col-span-12 lg:col-span-7">
+
+        {% if result %}
+
+        <!-- Ringkasan (di tengah) -->
+        <div class="flex flex-wrap justify-center items-center gap-x-10 gap-y-3 pb-5 mb-5 border-b hairline text-center">
+          <div>
+            <div class="lbl text-ink-500 mb-1">Person</div>
+            <div class="font-extrabold text-[24px] num leading-none">{{ result.total_person }}</div>
+          </div>
+          <div class="w-px h-8 bg-ink-300/70 hidden sm:block"></div>
+          <div>
+            <div class="lbl text-ink-500 mb-1">Compliant</div>
+            <div class="font-extrabold text-[24px] num leading-none text-ok-600">{{ result.total_compliant }}</div>
+          </div>
+          <div class="w-px h-8 bg-ink-300/70 hidden sm:block"></div>
+          <div>
+            <div class="lbl text-ink-500 mb-1">Non-Compliant</div>
+            <div class="font-extrabold text-[24px] num leading-none text-bad-600">{{ result.total_violation }}</div>
+          </div>
+        </div>
+
+        <!-- Foto asli vs hasil -->
+        <div class="grid grid-cols-2 gap-3 mb-6">
+          <figure>
+            <figcaption class="lbl text-ink-500 mb-1.5">Foto Asli</figcaption>
+            <img src="{{ url_for('static', filename=result.image_name) }}"
+                class="w-full border hairline rounded-xl shadow-card">
+          </figure>
+          <figure>
+            <figcaption class="lbl text-ink-500 mb-1.5">Hasil Deteksi</figcaption>
+            <img src="{{ url_for('static', filename=result.result_name) }}"
+                class="w-full border hairline rounded-xl shadow-card">
+          </figure>
+        </div>
+
+        <!-- Rincian per pekerja -->
+        <div class="lbl text-ink-500 mb-2">Rincian Per Pekerja</div>
+        <div class="border hairline rounded-xl bg-white divide-y hairline shadow-card
+                    max-h-[420px] overflow-y-auto">
+          {% for p in result.persons %}
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-baseline gap-2">
+                <span class="text-[10px] text-ink-500">Person</span>
+                <span class="font-bold text-[14px] num">#{{ "%02d"|format(p.number) }}</span>
+              </div>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border
+                {% if p.status == 'COMPLIANT' %}
+                  border-ok-500/40 bg-ok-500/10 text-ok-600
+                {% else %}
+                  border-bad-500/40 bg-bad-500/10 text-bad-600
+                {% endif %}">
+                {{ p.status }}
+              </span>
+            </div>
+
+            <table class="w-full text-[12px]">
+              <tbody class="divide-y hairline">
+                {% for ppe in required %}
+                <tr>
+                  <td class="py-1.5 text-ink-700 w-1/3 text-[11px]">{{ ppe }}</td>
+                  <td class="py-1.5">
+                    {% if ppe in p.ppe %}
+                      <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-ok-600 font-semibold num">
+                          {{ "%.0f"|format(p.ppe[ppe].conf * 100) }}%
+                        </span>
+                        <div class="flex-1 max-w-[120px] h-1 bg-ink-100 rounded-full overflow-hidden">
+                          <div class="h-full bg-ok-500" style="width: {{ p.ppe[ppe].conf * 100 }}%"></div>
+                        </div>
+                      </div>
+                    {% else %}
+                      <span class="text-[11px] text-bad-600 font-medium">tidak terdeteksi</span>
+                    {% endif %}
+                  </td>
+                  <td class="py-1.5 text-right w-5">
+                    {% if ppe in p.ppe %}
+                      <span class="text-ok-600 font-bold text-[12px]">✓</span>
+                    {% else %}
+                      <span class="text-bad-600 font-bold text-[12px]">✗</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            {% if p.violations %}
+            <div class="mt-2 pt-2 border-t hairline">
+              <div class="lbl text-ink-500 mb-0.5">Pelanggaran</div>
+              <div class="text-[11px] text-bad-600 font-semibold">
+                {% for v in p.violations %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+
+        <!-- Placeholder -->
+        <div class="min-h-[420px] border-2 border-dashed border-brand-200 rounded-xl
+                    bg-brand-50/30 grid place-items-center text-center p-10">
+          <div>
+            <div class="text-[40px] text-brand-300 mb-3">◫</div>
+            <div class="text-[14px] font-semibold text-brand-600">Hasil analisis akan muncul di sini</div>
+            <div class="text-[11px] text-ink-500 mt-1">
+              Pilih sample atau unggah foto untuk memulai
+            </div>
+          </div>
+        </div>
+
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 — AKURASI MODEL ============ -->
+<section id="akurasi" class="border-t hairline bg-white">
+  <div class="max-w-6xl mx-auto px-6 py-16">
+    <div class="flex items-center gap-4 mb-12">
+      <span class="sec-num">04</span>
+      <span class="h-px flex-1 bg-ink-300/70"></span>
+      <span class="lbl text-ink-500">Evaluasi Model</span>
+    </div>
+
+    <h2 class="font-extrabold text-[32px] sm:text-[40px] tracking-tight mb-3">
+      Akurasi & Evaluasi YOLOv11s
+    </h2>
+    <p class="text-[15px] text-ink-500 mb-10 max-w-2xl">
+      Hasil evaluasi deteksi APD pada test set berdasarkan kinerja model secara keseluruhan dan pada setiap kelas.
+    </p>
+
+    <!-- Ringkasan rata-rata (inline, bukan card) -->
+    <div class="flex flex-wrap justify-center items-center gap-x-10 gap-y-4 pb-6 mb-8 border-b hairline text-center">
+      <div>
+        <div class="lbl text-ink-500 mb-1">Precision</div>
+        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.p }}%</div>
+      </div>
+      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
+      <div>
+        <div class="lbl text-ink-500 mb-1">Recall</div>
+        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.r }}%</div>
+      </div>
+      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
+      <div>
+        <div class="lbl text-ink-500 mb-1">mAP@0.5</div>
+        <div class="font-extrabold text-[26px] num leading-none text-brand-600">{{ acc_avg.map50 }}%</div>
+      </div>
+      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
+      <div>
+        <div class="lbl text-ink-500 mb-1">mAP@0.5:0.95</div>
+        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.map }}%</div>
+      </div>
+    </div>
+
+    <!-- Tabel per kelas (versi ringkas) -->
+    <div class="max-w-3xl mx-auto border hairline rounded-xl overflow-hidden shadow-card bg-white">
+      <table class="w-full text-[12px]">
+        <thead>
+          <tr class="bg-brand-50 border-b hairline">
+            <th class="text-left px-4 py-2.5 lbl text-brand-700 font-bold">Kelas</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">Precision</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">Recall</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">mAP@0.5</th>
+            <th class="text-right px-4 py-2.5 lbl text-brand-700 font-bold">mAP@0.5:0.95</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y hairline">
+          {% for a in accuracy %}
+          <tr class="hover:bg-brand-50/40 transition-colors">
+            <td class="px-4 py-2">
+              <div class="font-semibold text-ink-900">{{ a.kelas }}</div>
+              <div class="text-[10px] text-ink-500">{{ a.sub }}</div>
+            </td>
+            <td class="px-3 py-2 text-right num">{{ a.p }}%</td>
+            <td class="px-3 py-2 text-right num">{{ a.r }}%</td>
+            <td class="px-3 py-2 text-right num font-semibold text-brand-600">{{ a.map50 }}%</td>
+            <td class="px-4 py-2 text-right num text-ink-500">{{ a.map }}%</td>
+          </tr>
+          {% endfor %}
+          <tr class="bg-brand-50 font-bold">
+            <td class="px-4 py-2">Rata-rata</td>
+            <td class="px-3 py-2 text-right num">{{ acc_avg.p }}%</td>
+            <td class="px-3 py-2 text-right num">{{ acc_avg.r }}%</td>
+            <td class="px-3 py-2 text-right num text-brand-600">{{ acc_avg.map50 }}%</td>
+            <td class="px-4 py-2 text-right num">{{ acc_avg.map }}%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t hairline">
+  <div class="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px] text-ink-500">
+    <span>© 2026 Kelompok 4 — Deep Learning Project · S1 Sains Data UPN Veteran Jawa Timur</span>
+  </div>
+</footer>
+
+<script>
+  const fi = document.getElementById('file-input');
+  const fl = document.getElementById('file-label');
+  if (fi && fl) {
+    fi.addEventListener('change', () => {
+      fl.textContent = fi.files[0]?.name || 'Klik untuk memilih foto (JPG / PNG)';
+    });
+  }
+  {% if result %}
+    window.addEventListener('load', () => {
+      document.getElementById('test')?.scrollIntoView({behavior:'smooth'});
+    });
+  {% endif %}
+</script>
+
+</body>
+</html>
