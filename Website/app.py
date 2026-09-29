@@ -71,6 +71,7 @@ ACCURACY = [
 ACCURACY_AVG = {"p": 87.8, "r": 86.4, "map50": 90.1, "map": 62.6}
 
 model = YOLO(os.path.join(BASE_DIR, "best.pt"))
+model.export(format="onnx", imgsz=640, simplify=True)
 
 
 # ---------- DB ----------
