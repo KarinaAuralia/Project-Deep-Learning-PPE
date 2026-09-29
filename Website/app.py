@@ -1,19 +1,35 @@
 import os
 import shutil
 import sqlite3
+import tempfile
 import uuid
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for
-from ultralytics import YOLO
-from PIL import Image
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from PIL import Image, ImageDraw
+import numpy as np
+import onnxruntime as ort
 
 app = Flask(__name__)
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads")
-RESULT_DIR = os.path.join(BASE_DIR, "static", "results")
-SAMPLE_DIR = os.path.join(BASE_DIR, "static", "samples")
-DB_PATH    = os.path.join(BASE_DIR, "ppe.db")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# ---- Paths: lokal vs Vercel ----
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
+if IS_VERCEL:
+    # Vercel filesystem read-only kecuali /tmp
+    WRITE_ROOT = tempfile.gettempdir()          # /tmp
+else:
+    WRITE_ROOT = STATIC_DIR                     # lokal: static/
+
+UPLOAD_DIR = os.path.join(WRITE_ROOT, "uploads")
+RESULT_DIR = os.path.join(WRITE_ROOT, "results")
+DB_PATH    = os.path.join(WRITE_ROOT, "ppe.db")
+
+# Sample & model tetap dibaca dari repo (read-only, tidak masalah)
+SAMPLE_DIR = os.path.join(STATIC_DIR, "samples")
+MODEL_PATH = os.path.join(BASE_DIR, "best.onnx")
 
 
 def ensure_dir(p):
@@ -24,10 +40,17 @@ def ensure_dir(p):
 
 ensure_dir(UPLOAD_DIR)
 ensure_dir(RESULT_DIR)
-ensure_dir(SAMPLE_DIR)
 
 CLASS_NAMES  = ["Mask", "Vest", "Person", "Gloves", "Hard_hat", "Safety_boots"]
 REQUIRED_PPE = ["Mask", "Vest", "Gloves", "Hard_hat", "Safety_boots"]
+COLORS = {
+    "Person":       (34, 197, 94),
+    "Hard_hat":     (59, 130, 246),
+    "Vest":         (234, 179, 8),
+    "Gloves":       (239, 68, 68),
+    "Safety_boots": (168, 85, 247),
+    "Mask":         (6, 182, 212),
+}
 
 SAMPLES = [
     {"label": "Sample 01", "file": "sample1.jpg"},
@@ -35,7 +58,6 @@ SAMPLES = [
     {"label": "Sample 03", "file": "sample3.jpg"},
 ]
 
-# ====== EDIT DATA TIM DI SINI ======
 TEAM = [
     {"nama": "Difta Alzena Sakhi", "nim": "23083010061", "initsial": "DA",
      "peran": "Ketua · Model Architect & Quantization",
@@ -59,7 +81,6 @@ TEAM = [
      "foto": "anggota5.jpg"},
 ]
 
-# ====== AKURASI MODEL (placeholder — edit sesuai hasil training) ======
 ACCURACY = [
     {"kelas": "Hard_hat",     "sub": "Helm Keselamatan",   "p": 95.3, "r": 92.7, "map50": 97.0, "map": 76.3},
     {"kelas": "Vest",         "sub": "Rompi High-Vis",     "p": 91.8, "r": 91.4, "map50": 96.4, "map": 76.1},
@@ -70,8 +91,11 @@ ACCURACY = [
 ]
 ACCURACY_AVG = {"p": 87.8, "r": 86.4, "map50": 90.1, "map": 62.6}
 
-model = YOLO(os.path.join(BASE_DIR, "best.pt"))
-model.export(format="onnx", imgsz=640, simplify=True)
+# ---- Load ONNX sekali (bukan ultralytics) ----
+session    = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+INPUT_NAME = session.get_inputs()[0].name
+OUTPUT_NAME = session.get_outputs()[0].name
+INPUT_SIZE = 640
 
 
 # ---------- DB ----------
@@ -97,7 +121,92 @@ def save_analysis(area, img, res, total, comp, viol):
     conn.commit(); conn.close()
 
 
-# ---------- Detection ----------
+# ---------- ONNX Inference ----------
+def preprocess(image_path):
+    img = Image.open(image_path).convert("RGB")
+    ow, oh = img.size
+    scale = min(INPUT_SIZE / ow, INPUT_SIZE / oh)
+    nw, nh = int(ow * scale), int(oh * scale)
+    px, py = (INPUT_SIZE - nw) // 2, (INPUT_SIZE - nh) // 2
+
+    canvas = Image.new("RGB", (INPUT_SIZE, INPUT_SIZE), (0, 0, 0))
+    canvas.paste(img.resize((nw, nh)), (px, py))
+
+    arr = np.array(canvas, dtype=np.float32) / 255.0
+    arr = arr.transpose(2, 0, 1)[None, ...]  # NCHW
+    return arr, img, scale, px, py
+
+
+def compute_iou(box, boxes):
+    x1 = np.maximum(box[0], boxes[:, 0]); y1 = np.maximum(box[1], boxes[:, 1])
+    x2 = np.minimum(box[2], boxes[:, 2]); y2 = np.minimum(box[3], boxes[:, 3])
+    inter = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
+    A = (box[2] - box[0]) * (box[3] - box[1])
+    B = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    return inter / (A + B - inter + 1e-9)
+
+
+def nms(xyxy, scores, class_ids, iou_thr):
+    keep_all = []
+    for c in np.unique(class_ids):
+        mask = class_ids == c
+        c_boxes, c_scores = xyxy[mask], scores[mask]
+        c_idx = np.where(mask)[0]
+        order = c_scores.argsort()[::-1]
+        while len(order):
+            i = order[0]
+            keep_all.append(c_idx[i])
+            if len(order) == 1: break
+            ious = compute_iou(c_boxes[i], c_boxes[order[1:]])
+            order = order[1:][ious < iou_thr]
+    return keep_all
+
+
+def decode(raw, ow, oh, scale, px, py, conf_thr=0.35, iou_thr=0.45):
+    preds = raw[0]           # [4+nc, 8400]
+    nc = len(CLASS_NAMES)
+    boxes  = preds[:4, :]
+    scores = preds[4:4+nc, :]
+
+    class_ids = np.argmax(scores, axis=0)
+    confs     = np.max(scores, axis=0)
+    mask = confs > conf_thr
+    if not mask.any(): return []
+
+    boxes, class_ids, confs = boxes[:, mask].T, class_ids[mask], confs[mask]
+
+    xyxy = np.zeros_like(boxes)
+    xyxy[:, 0] = boxes[:, 0] - boxes[:, 2] / 2
+    xyxy[:, 1] = boxes[:, 1] - boxes[:, 3] / 2
+    xyxy[:, 2] = boxes[:, 0] + boxes[:, 2] / 2
+    xyxy[:, 3] = boxes[:, 1] + boxes[:, 3] / 2
+
+    xyxy[:, [0, 2]] = (xyxy[:, [0, 2]] - px) / scale
+    xyxy[:, [1, 3]] = (xyxy[:, [1, 3]] - py) / scale
+    xyxy[:, [0, 2]] = np.clip(xyxy[:, [0, 2]], 0, ow)
+    xyxy[:, [1, 3]] = np.clip(xyxy[:, [1, 3]], 0, oh)
+
+    keep = nms(xyxy, confs, class_ids, iou_thr)
+    return [
+        {"class": CLASS_NAMES[int(class_ids[i])],
+         "conf":  float(confs[i]),
+         "bbox":  [float(v) for v in xyxy[i]]}
+        for i in keep
+    ]
+
+
+def draw_boxes(img, detections):
+    draw = ImageDraw.Draw(img)
+    for d in detections:
+        x1, y1, x2, y2 = d["bbox"]
+        color = COLORS.get(d["class"], (255, 255, 255))
+        draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
+        draw.text((x1 + 4, max(0, y1 - 14)),
+                  f'{d["class"]} {d["conf"]*100:.0f}%', fill=color)
+    return img
+
+
+# ---------- Logic ----------
 def iou(a, b):
     x1, y1 = max(a[0], b[0]), max(a[1], b[1])
     x2, y2 = min(a[2], b[2]), min(a[3], b[3])
@@ -111,17 +220,17 @@ def pt_in(px, py, b):
 
 
 def analyze_image(image_path):
-    r = model.predict(image_path, conf=0.35, verbose=False)[0]
-    persons, ppes = [], []
-    for box in r.boxes:
-        name = model.names[int(box.cls)]
-        x1, y1, x2, y2 = box.xyxy[0].tolist()
-        det = {"class": name, "conf": float(box.conf), "bbox": [x1, y1, x2, y2]}
-        (persons if name == "Person" else ppes).append(det)
+    inp, orig_img, scale, px, py = preprocess(image_path)
+    raw = session.run([OUTPUT_NAME], {INPUT_NAME: inp})[0]
+    detections = decode(raw, orig_img.width, orig_img.height, scale, px, py)
+
+    persons = [d for d in detections if d["class"] == "Person"]
+    ppes    = [d for d in detections if d["class"] != "Person"]
 
     persons.sort(key=lambda p: p["bbox"][0])
     for i, p in enumerate(persons):
-        p["number"] = i + 1; p["ppe"] = {}
+        p["number"] = i + 1
+        p["ppe"] = {}
 
     for ppe in ppes:
         cx = (ppe["bbox"][0] + ppe["bbox"][2]) / 2
@@ -141,10 +250,9 @@ def analyze_image(image_path):
         p["violations"] = miss
         p["status"] = "COMPLIANT" if not miss else "NON-COMPLIANT"
 
-    ann = r.plot()
-    res_img = Image.fromarray(ann[:, :, ::-1])
+    result_img = draw_boxes(orig_img.copy(), detections)
     res_name = f"{uuid.uuid4().hex[:8]}.jpg"
-    res_img.save(os.path.join(RESULT_DIR, res_name), quality=88)
+    result_img.save(os.path.join(RESULT_DIR, res_name), quality=85)
 
     total = len(persons)
     comp = sum(1 for p in persons if p["status"] == "COMPLIANT")
@@ -152,7 +260,18 @@ def analyze_image(image_path):
             "total_violation": total - comp, "result_name": res_name}
 
 
-# ---------- Routes (semua render index.html) ----------
+# ---------- Static files dari /tmp ----------
+@app.route("/uploads/<path:filename>")
+def serve_upload(filename):
+    return send_from_directory(UPLOAD_DIR, filename)
+
+
+@app.route("/results/<path:filename>")
+def serve_result(filename):
+    return send_from_directory(RESULT_DIR, filename)
+
+
+# ---------- Routes ----------
 def render(result=None):
     return render_template("index.html",
         team=TEAM, samples=SAMPLES, required=REQUIRED_PPE,
@@ -176,8 +295,10 @@ def analyze_upload():
     r = analyze_image(path)
     r["image_name"] = name
     r["area"] = "-"
-    save_analysis("-", name, r["result_name"], r["total_person"], r["total_compliant"], r["total_violation"])
+    save_analysis("-", name, r["result_name"],
+                  r["total_person"], r["total_compliant"], r["total_violation"])
     return render(r)
+
 
 @app.route("/try/<sample_file>")
 def try_sample(sample_file):
@@ -188,11 +309,14 @@ def try_sample(sample_file):
     dst = os.path.join(UPLOAD_DIR, name)
     shutil.copy(src, dst)
     r = analyze_image(dst)
-    r["image_name"] = name; r["area"] = "Sample"
-    save_analysis("Sample", name, r["result_name"], r["total_person"], r["total_compliant"], r["total_violation"])
+    r["image_name"] = name
+    r["area"] = "Sample"
+    save_analysis("Sample", name, r["result_name"],
+                  r["total_person"], r["total_compliant"], r["total_violation"])
     return render(r)
 
 
+# Vercel butuh objek `app`, bukan app.run()
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)

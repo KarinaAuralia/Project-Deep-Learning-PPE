@@ -257,12 +257,12 @@ tailwind.config = {
         <div class="grid grid-cols-2 gap-3 mb-6">
           <figure>
             <figcaption class="lbl text-ink-500 mb-1.5">Foto Asli</figcaption>
-            <img src="{{ url_for('static', filename='uploads/' + result.image_name) }}"
+            <img src="{{ url_for('static', filename==result.image_name) }}"
                 class="w-full border hairline rounded-xl shadow-card">
           </figure>
           <figure>
             <figcaption class="lbl text-ink-500 mb-1.5">Hasil Deteksi</figcaption>
-            <img src="{{ url_for('static', filename='results/' + result.result_name) }}"
+            <img src="{{ url_for('static', filename=result.result_name) }}"
                 class="w-full border hairline rounded-xl shadow-card">
           </figure>
         </div>
