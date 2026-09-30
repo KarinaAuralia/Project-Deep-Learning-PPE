@@ -68,7 +68,6 @@ tailwind.config = {
 
 <!-- ============ 01 — BERANDA ============ -->
 <section id="beranda" class="max-w-6xl mx-auto px-6 pt-16 pb-16">
-
   <div class="grid grid-cols-12 gap-10 items-start">
     <div class="col-span-12 lg:col-span-7">
       <h1 class="font-extrabold text-[34px] sm:text-[46px] leading-[1.1] tracking-tight">
@@ -77,8 +76,8 @@ tailwind.config = {
         <span class="text-brand-600">YOLO</span>
       </h1>
       <p class="mt-7 text-[15px] leading-relaxed text-ink-700 max-w-xl">
-      Sistem ini mendeteksi penggunaan mask, vest, gloves, hard hat, dan safety
-      boots pada kru di area kerja melalui foto, kemudian mengidentifikasi ketidaksesuaian
+      Sistem ini mendeteksi penggunaan helmet, mask, safety vest, boots, dan glove
+      pada kru di area kerja melalui foto, kemudian mengidentifikasi ketidaksesuaian
       penggunaan APD.
       </p>
       <div class="mt-8 flex flex-wrap gap-3">
@@ -95,22 +94,21 @@ tailwind.config = {
       <div class="lbl text-ink-500 mb-4">Spesifikasi Model</div>
       <table class="w-full text-[13px]">
         <tbody class="divide-y hairline">
-          <tr><td class="py-2.5 text-ink-500">Arsitektur</td><td class="py-2.5 text-right font-medium">YOLOv11s</td></tr>
+          <tr><td class="py-2.5 text-ink-500">Arsitektur</td><td class="py-2.5 text-right font-medium">YOLOv8n</td></tr>
           <tr><td class="py-2.5 text-ink-500">Framework</td><td class="py-2.5 text-right font-medium">Ultralytics + PyTorch</td></tr>
-          <tr><td class="py-2.5 text-ink-500">Kelas deteksi</td><td class="py-2.5 text-right font-medium num">6</td></tr>
-          <tr><td class="py-2.5 text-ink-500">mAP@0.5</td><td class="py-2.5 text-right font-semibold text-brand-600 num">90.1%</td></tr>
+          <tr><td class="py-2.5 text-ink-500">Kelas deteksi</td><td class="py-2.5 text-right font-medium num">5</td></tr>
+          <tr><td class="py-2.5 text-ink-500">mAP@0.5</td><td class="py-2.5 text-right font-semibold text-brand-600 num">86.0%</td></tr>
           <tr><td class="py-2.5 text-ink-500">Input</td><td class="py-2.5 text-right font-medium num">640 × 640 RGB</td></tr>
         </tbody>
       </table>
       <div class="mt-6 p-4 border hairline rounded-xl bg-brand-50/50">
         <div class="lbl text-ink-500 mb-2">Kelas APD</div>
         <div class="flex flex-wrap gap-1.5 text-[11px]">
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Helmet</span>
           <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Mask</span>
-          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Vest</span>
-          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Person</span>
-          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Gloves</span>
-          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Hard_hat</span>
-          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Safety_boots</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Safety Vest</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Boots</span>
+          <span class="px-2.5 py-1 bg-white border hairline rounded-md font-medium">Glove</span>
         </div>
       </div>
     </aside>
@@ -150,8 +148,7 @@ tailwind.config = {
         <p class="text-[10px] text-ink-500 num mt-1">NPM {{ m.nim }}</p>
         <p class="text-[11px] text-ink-500 mt-3 leading-snug">{{ m.peran }}</p>
 
-        <a href="{{ m.linkedin }}" target="_blank" rel="noopener"
-           class="mt-auto pt-4">
+        <a href="{{ m.linkedin }}" target="_blank" rel="noopener" class="mt-auto pt-4">
           <span class="w-[96px] inline-flex items-center justify-center px-3.5 py-1.5 rounded-full border border-brand-200 bg-brand-50 text-brand-600 text-[11px] font-semibold hover:bg-brand-600 hover:text-white hover:border-brand-600 transition-colors">
             LinkedIn
           </span>
@@ -177,30 +174,50 @@ tailwind.config = {
     </h2>
     <p class="text-[15px] text-ink-500 mb-10 max-w-2xl">
       Pilih salah satu <b>sample</b> yang tersedia atau unggah foto
-      lapangan untuk menguji deteksi APD dan melihat status kepatuhan setiap pekerja.
+      lapangan untuk menguji deteksi APD.
     </p>
 
     <div class="grid grid-cols-12 gap-8 items-start">
 
-      <!-- ============ KOLOM KIRI: Sample + Upload ============ -->
-      <div class="col-span-12 lg:col-span-5 space-y-8">
+      <!-- KOLOM KIRI -->
+      <div class="col-span-12 lg:col-span-5 space-y-6">
+
+        <!-- Slider -->
+        <div class="bg-white border hairline rounded-xl p-5 shadow-card">
+          <div class="flex items-center justify-between mb-2">
+            <label for="conf-slider" class="lbl text-ink-500">Confidence Threshold</label>
+            <span id="conf-value" class="text-[13px] font-bold text-brand-600 num">0.25</span>
+          </div>
+          <input type="range" id="conf-slider"
+                min="0.10" max="0.90" step="0.05" value="0.25"
+                class="w-full accent-brand-600 cursor-pointer">
+          <div class="flex justify-between text-[10px] text-ink-500 mt-1">
+            <span>Sensitif (0.10)</span>
+            <span>Ketat (0.90)</span>
+          </div>
+          <p class="text-[11px] text-ink-500 mt-3 leading-relaxed">
+            Semakin rendah threshold, semakin banyak objek terdeteksi, tetapi false positive juga meningkat.
+            Sebaliknya, semakin tinggi threshold, semakin sedikit objek terdeteksi dengan tingkat keyakinan yang lebih tinggi.
+          </p>
+        </div>
 
         <!-- Sample -->
         <div>
           <div class="lbl text-ink-500 mb-3">Sample Data</div>
           <div class="grid grid-cols-3 gap-2">
             {% for s in samples %}
-            <a href="{{ url_for('try_sample', sample_file=s.file) }}"
-               class="flex flex-col items-center text-center bg-white border hairline rounded-xl
-                      px-3 py-4 transition-all hover:border-brand-500 hover:shadow-soft group">
+            <button type="button"
+                    onclick="trySample('{{ s.file }}')"
+                    class="flex flex-col items-center text-center bg-white border hairline rounded-xl
+                          px-3 py-4 transition-all hover:border-brand-500 hover:shadow-soft group">
               <span class="w-7 h-7 rounded-full border border-brand-200 bg-brand-50 grid place-items-center
-                           text-[11px] font-bold text-brand-600 num mb-2
-                           group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition-colors">
+                          text-[11px] font-bold text-brand-600 num mb-2
+                          group-hover:bg-brand-600 group-hover:text-white group-hover:border-brand-600 transition-colors">
                 {{ loop.index }}
               </span>
               <div class="text-[12px] font-semibold leading-tight">{{ s.label }}</div>
               <div class="text-[10px] text-ink-500 mt-1">{{ s.sub }}</div>
-            </a>
+            </button>
             {% endfor %}
           </div>
         </div>
@@ -208,7 +225,8 @@ tailwind.config = {
         <!-- Upload -->
         <div>
           <div class="lbl text-ink-500 mb-3">Atau Unggah Foto</div>
-          <form action="/analyze" method="post" enctype="multipart/form-data" class="space-y-3">
+          <form action="/analyze" method="post" enctype="multipart/form-data"
+                id="upload-form" class="space-y-3">
             <label class="block border-2 border-dashed border-brand-200 hover:border-brand-500
                           bg-brand-50/40 rounded-xl transition-colors cursor-pointer">
               <input type="file" name="image" accept="image/*" required class="hidden" id="file-input">
@@ -220,120 +238,84 @@ tailwind.config = {
                 <div class="text-[10px] text-ink-500 mt-1">JPG / PNG · maks ~10 MB</div>
               </div>
             </label>
+            <input type="hidden" name="conf" id="upload-conf" value="0.25">
             <button type="submit"
                     class="w-full bg-brand-600 hover:bg-brand-700 text-white text-[13px]
-                           font-semibold py-3 rounded-xl shadow-soft transition-all">
+                          font-semibold py-3 rounded-xl shadow-soft transition-all">
               Analisis
             </button>
           </form>
         </div>
 
+        <form id="sample-form" method="post" style="display:none">
+          <input type="hidden" name="conf" id="sample-conf" value="0.25">
+        </form>
       </div>
 
-      <!-- ============ KOLOM KANAN: Hasil ============ -->
+      <!-- KOLOM KANAN -->
       <div class="col-span-12 lg:col-span-7">
 
         {% if result %}
 
-        <!-- Ringkasan (di tengah) -->
-        <div class="flex flex-wrap justify-center items-center gap-x-10 gap-y-3 pb-5 mb-5 border-b hairline text-center">
-          <div>
-            <div class="lbl text-ink-500 mb-1">Person</div>
-            <div class="font-extrabold text-[24px] num leading-none">{{ result.total_person }}</div>
-          </div>
-          <div class="w-px h-8 bg-ink-300/70 hidden sm:block"></div>
-          <div>
-            <div class="lbl text-ink-500 mb-1">Compliant</div>
-            <div class="font-extrabold text-[24px] num leading-none text-ok-600">{{ result.total_compliant }}</div>
-          </div>
-          <div class="w-px h-8 bg-ink-300/70 hidden sm:block"></div>
-          <div>
-            <div class="lbl text-ink-500 mb-1">Non-Compliant</div>
-            <div class="font-extrabold text-[24px] num leading-none text-bad-600">{{ result.total_violation }}</div>
-          </div>
-        </div>
-
-        <!-- Foto asli vs hasil -->
         <div class="grid grid-cols-2 gap-3 mb-6">
           <figure>
-            <figcaption class="lbl text-ink-500 mb-1.5">Foto Asli</figcaption>
-            <img src="{{ url_for('static', filename=result.image_name) }}"
-                class="w-full border hairline rounded-xl shadow-card">
+            <figcaption class="lbl text-ink-500 mb-1.5 flex items-center justify-between">
+              <span>Foto Asli</span>
+              <button type="button"
+                      onclick="openZoom('{{ url_for('serve_upload', filename=result.image_name) }}')"
+                      class="text-brand-600 hover:text-brand-700 normal-case tracking-normal text-[10px] font-semibold">
+                ⤢ Perbesar
+              </button>
+            </figcaption>
+            <img src="{{ url_for('serve_upload', filename=result.image_name) }}"
+                class="w-full border hairline rounded-xl shadow-card cursor-zoom-in hover:opacity-90 transition-opacity"
+                onclick="openZoom('{{ url_for('serve_upload', filename=result.image_name) }}')">
           </figure>
           <figure>
-            <figcaption class="lbl text-ink-500 mb-1.5">Hasil Deteksi</figcaption>
-            <img src="{{ url_for('static', filename=result.result_name) }}"
-                class="w-full border hairline rounded-xl shadow-card">
+            <figcaption class="lbl text-ink-500 mb-1.5 flex items-center justify-between">
+              <span>Hasil Deteksi</span>
+              <button type="button"
+                      onclick="openZoom('{{ url_for('serve_result', filename=result.result_name) }}')"
+                      class="text-brand-600 hover:text-brand-700 normal-case tracking-normal text-[10px] font-semibold">
+                ⤢ Perbesar
+              </button>
+            </figcaption>
+            <img src="{{ url_for('serve_result', filename=result.result_name) }}"
+                class="w-full border hairline rounded-xl shadow-card cursor-zoom-in hover:opacity-90 transition-opacity"
+                onclick="openZoom('{{ url_for('serve_result', filename=result.result_name) }}')">
           </figure>
         </div>
 
-        <!-- Rincian per pekerja -->
-        <div class="lbl text-ink-500 mb-2">Rincian Per Pekerja</div>
-        <div class="border hairline rounded-xl bg-white divide-y hairline shadow-card
-                    max-h-[420px] overflow-y-auto">
-          {% for p in result.persons %}
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-baseline gap-2">
-                <span class="text-[10px] text-ink-500">Person</span>
-                <span class="font-bold text-[14px] num">#{{ "%02d"|format(p.number) }}</span>
-              </div>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border
-                {% if p.status == 'COMPLIANT' %}
-                  border-ok-500/40 bg-ok-500/10 text-ok-600
-                {% else %}
-                  border-bad-500/40 bg-bad-500/10 text-bad-600
-                {% endif %}">
-                {{ p.status }}
-              </span>
+        <div class="lbl text-ink-500 mb-2">Status APD Terdeteksi</div>
+        <div class="border hairline rounded-xl bg-white divide-y hairline shadow-card">
+          {% for ppe in result.ppe_status %}
+          <div class="p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              {% if ppe.detected %}
+                <span class="w-7 h-7 rounded-full bg-ok-500/10 border border-ok-500/40 grid place-items-center text-ok-600 text-[14px] font-bold">✓</span>
+              {% else %}
+                <span class="w-7 h-7 rounded-full bg-bad-500/10 border border-bad-500/40 grid place-items-center text-bad-600 text-[14px] font-bold">✗</span>
+              {% endif %}
+              <div class="text-[13px] font-semibold">{{ ppe.name }}</div>
             </div>
-
-            <table class="w-full text-[12px]">
-              <tbody class="divide-y hairline">
-                {% for ppe in required %}
-                <tr>
-                  <td class="py-1.5 text-ink-700 w-1/3 text-[11px]">{{ ppe }}</td>
-                  <td class="py-1.5">
-                    {% if ppe in p.ppe %}
-                      <div class="flex items-center gap-2">
-                        <span class="text-[11px] text-ok-600 font-semibold num">
-                          {{ "%.0f"|format(p.ppe[ppe].conf * 100) }}%
-                        </span>
-                        <div class="flex-1 max-w-[120px] h-1 bg-ink-100 rounded-full overflow-hidden">
-                          <div class="h-full bg-ok-500" style="width: {{ p.ppe[ppe].conf * 100 }}%"></div>
-                        </div>
-                      </div>
-                    {% else %}
-                      <span class="text-[11px] text-bad-600 font-medium">tidak terdeteksi</span>
-                    {% endif %}
-                  </td>
-                  <td class="py-1.5 text-right w-5">
-                    {% if ppe in p.ppe %}
-                      <span class="text-ok-600 font-bold text-[12px]">✓</span>
-                    {% else %}
-                      <span class="text-bad-600 font-bold text-[12px]">✗</span>
-                    {% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-
-            {% if p.violations %}
-            <div class="mt-2 pt-2 border-t hairline">
-              <div class="lbl text-ink-500 mb-0.5">Pelanggaran</div>
-              <div class="text-[11px] text-bad-600 font-semibold">
-                {% for v in p.violations %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}
-              </div>
+            <div>
+              {% if ppe.detected %}
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-ok-600 font-bold num">{{ "%.0f"|format(ppe.conf * 100) }}%</span>
+                  <div class="w-20 h-1 bg-ink-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-ok-500" style="width: {{ ppe.conf * 100 }}%"></div>
+                  </div>
+                </div>
+              {% else %}
+                <span class="text-[11px] text-bad-600 font-medium">tidak terdeteksi</span>
+              {% endif %}
             </div>
-            {% endif %}
           </div>
           {% endfor %}
         </div>
 
         {% else %}
 
-        <!-- Placeholder -->
         <div class="min-h-[420px] border-2 border-dashed border-brand-200 rounded-xl
                     bg-brand-50/30 grid place-items-center text-center p-10">
           <div>
@@ -348,6 +330,19 @@ tailwind.config = {
         {% endif %}
       </div>
     </div>
+
+    <!-- Zoom modal -->
+    <div id="zoom-modal"
+        class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-sm items-center justify-center p-4"
+        onclick="closeZoom()">
+      <button type="button" onclick="closeZoom()"
+              class="absolute top-4 right-4 text-white/80 hover:text-white text-3xl leading-none w-10 h-10 grid place-items-center rounded-full hover:bg-white/10 transition-colors">
+        ×
+      </button>
+      <img id="zoom-img" src=""
+          class="max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl"
+          onclick="event.stopPropagation()">
+    </div>
   </div>
 </section>
 
@@ -361,37 +356,53 @@ tailwind.config = {
     </div>
 
     <h2 class="font-extrabold text-[32px] sm:text-[40px] tracking-tight mb-3">
-      Akurasi & Evaluasi YOLOv11s
+      Akurasi & Perbandingan Model
     </h2>
     <p class="text-[15px] text-ink-500 mb-10 max-w-2xl">
-      Hasil evaluasi deteksi APD pada test set berdasarkan kinerja model secara keseluruhan dan pada setiap kelas.
+      Perbandingan tiga varian YOLOv8n serta evaluasi per-kelas.
     </p>
 
-    <!-- Ringkasan rata-rata (inline, bukan card) -->
-    <div class="flex flex-wrap justify-center items-center gap-x-10 gap-y-4 pb-6 mb-8 border-b hairline text-center">
-      <div>
-        <div class="lbl text-ink-500 mb-1">Precision</div>
-        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.p }}%</div>
-      </div>
-      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
-      <div>
-        <div class="lbl text-ink-500 mb-1">Recall</div>
-        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.r }}%</div>
-      </div>
-      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
-      <div>
-        <div class="lbl text-ink-500 mb-1">mAP@0.5</div>
-        <div class="font-extrabold text-[26px] num leading-none text-brand-600">{{ acc_avg.map50 }}%</div>
-      </div>
-      <div class="w-px h-9 bg-ink-300/70 hidden sm:block"></div>
-      <div>
-        <div class="lbl text-ink-500 mb-1">mAP@0.5:0.95</div>
-        <div class="font-extrabold text-[26px] num leading-none">{{ acc_avg.map }}%</div>
-      </div>
+    <!-- Tabel perbandingan model -->
+    <div class="lbl text-ink-500 mb-3">Perbandingan Varian Model</div>
+    <div class="border hairline rounded-xl overflow-hidden shadow-card bg-white mb-10">
+      <table class="w-full text-[12px]">
+        <thead>
+          <tr class="bg-brand-50 border-b hairline">
+            <th class="text-left px-4 py-2.5 lbl text-brand-700 font-bold">Model</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">Precision</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">Recall</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">F1</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">mAP@0.5</th>
+            <th class="text-right px-3 py-2.5 lbl text-brand-700 font-bold">mAP@0.5:0.95</th>
+            <th class="text-right px-4 py-2.5 lbl text-brand-700 font-bold">Size (MB)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y hairline">
+          {% for m in model_comparison %}
+          <tr class="hover:bg-brand-50/40 transition-colors {% if m.best %}bg-brand-50/60{% endif %}">
+            <td class="px-4 py-2.5">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-ink-900">{{ m.nama }}</span>
+                {% if m.best %}
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand-600 text-white tracking-wide">TERBAIK</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="px-3 py-2.5 text-right num">{{ "%.2f"|format(m.p) }}%</td>
+            <td class="px-3 py-2.5 text-right num">{{ "%.2f"|format(m.r) }}%</td>
+            <td class="px-3 py-2.5 text-right num">{{ "%.2f"|format(m.f1) }}%</td>
+            <td class="px-3 py-2.5 text-right num {% if m.best %}font-semibold text-brand-600{% endif %}">{{ "%.2f"|format(m.map50) }}%</td>
+            <td class="px-3 py-2.5 text-right num text-ink-500">{{ "%.2f"|format(m.map) }}%</td>
+            <td class="px-4 py-2.5 text-right num text-ink-500">{{ "%.2f"|format(m.size) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    <!-- Tabel per kelas (versi ringkas) -->
-    <div class="max-w-3xl mx-auto border hairline rounded-xl overflow-hidden shadow-card bg-white">
+    <!-- Tabel akurasi per kelas -->
+    <div class="lbl text-ink-500 mb-3">Akurasi Per Kelas — Model Terbaik (FP32 Baseline)</div>
+    <div class="border hairline rounded-xl overflow-hidden shadow-card bg-white">
       <table class="w-full text-[12px]">
         <thead>
           <tr class="bg-brand-50 border-b hairline">
@@ -436,6 +447,30 @@ tailwind.config = {
 </footer>
 
 <script>
+  // Slider threshold
+  const slider = document.getElementById('conf-slider');
+  const confDisplay = document.getElementById('conf-value');
+  const uploadConf = document.getElementById('upload-conf');
+  const sampleConf = document.getElementById('sample-conf');
+
+  if (slider) {
+    slider.addEventListener('input', () => {
+      const v = parseFloat(slider.value).toFixed(2);
+      confDisplay.textContent = v;
+      if (uploadConf) uploadConf.value = v;
+      if (sampleConf) sampleConf.value = v;
+    });
+  }
+
+  // Sample submit
+  function trySample(file) {
+    const form = document.getElementById('sample-form');
+    document.getElementById('sample-conf').value = slider.value;
+    form.action = '/try/' + file;
+    form.submit();
+  }
+
+  // Preview nama file
   const fi = document.getElementById('file-input');
   const fl = document.getElementById('file-label');
   if (fi && fl) {
@@ -443,6 +478,27 @@ tailwind.config = {
       fl.textContent = fi.files[0]?.name || 'Klik untuk memilih foto (JPG / PNG)';
     });
   }
+
+  // Zoom modal
+  function openZoom(src) {
+    const modal = document.getElementById('zoom-modal');
+    document.getElementById('zoom-img').src = src;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeZoom() {
+    const modal = document.getElementById('zoom-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.getElementById('zoom-img').src = '';
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeZoom();
+  });
+
+  // Auto scroll ke hasil
   {% if result %}
     window.addEventListener('load', () => {
       document.getElementById('test')?.scrollIntoView({behavior:'smooth'});

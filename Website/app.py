@@ -5,7 +5,7 @@ import tempfile
 import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import onnxruntime as ort
 
@@ -18,18 +18,16 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 IS_VERCEL = os.environ.get("VERCEL") == "1"
 
 if IS_VERCEL:
-    # Vercel filesystem read-only kecuali /tmp
-    WRITE_ROOT = tempfile.gettempdir()          # /tmp
+    WRITE_ROOT = tempfile.gettempdir()
 else:
-    WRITE_ROOT = STATIC_DIR                     # lokal: static/
+    WRITE_ROOT = STATIC_DIR
 
 UPLOAD_DIR = os.path.join(WRITE_ROOT, "uploads")
 RESULT_DIR = os.path.join(WRITE_ROOT, "results")
 DB_PATH    = os.path.join(WRITE_ROOT, "ppe.db")
 
-# Sample & model tetap dibaca dari repo (read-only, tidak masalah)
 SAMPLE_DIR = os.path.join(STATIC_DIR, "samples")
-MODEL_PATH = os.path.join(BASE_DIR, "best.onnx")
+MODEL_PATH = os.path.join(BASE_DIR, "best_model.onnx")
 
 
 def ensure_dir(p):
@@ -41,21 +39,22 @@ def ensure_dir(p):
 ensure_dir(UPLOAD_DIR)
 ensure_dir(RESULT_DIR)
 
-CLASS_NAMES  = ["Mask", "Vest", "Person", "Gloves", "Hard_hat", "Safety_boots"]
-REQUIRED_PPE = ["Mask", "Vest", "Gloves", "Hard_hat", "Safety_boots"]
+# ---------- Kelas (urutan HARUS sama dengan model ONNX) ----------
+CLASS_NAMES  = ["Helmet", "Mask", "Safety Vest", "boots", "glove"]
+REQUIRED_PPE = ["Helmet", "Mask", "Safety Vest", "boots", "glove"]
+
 COLORS = {
-    "Person":       (34, 197, 94),
-    "Hard_hat":     (59, 130, 246),
-    "Vest":         (234, 179, 8),
-    "Gloves":       (239, 68, 68),
-    "Safety_boots": (168, 85, 247),
-    "Mask":         (6, 182, 212),
+    "Helmet":      (59, 130, 246),
+    "Mask":        (234, 179, 8),
+    "Safety Vest": (16, 185, 129),
+    "boots":       (168, 85, 247),
+    "glove":       (6, 182, 212),
 }
 
 SAMPLES = [
-    {"label": "Sample 01", "file": "sample1.jpg"},
-    {"label": "Sample 02", "file": "sample2.jpg"},
-    {"label": "Sample 03", "file": "sample3.jpg"},
+    {"label": "Sample 01", "file": "sample1.jpg", "sub": "Rig Floor"},
+    {"label": "Sample 02", "file": "sample2.jpg", "sub": "Dermaga"},
+    {"label": "Sample 03", "file": "sample3.jpg", "sub": "Kilang"},
 ]
 
 TEAM = [
@@ -81,21 +80,31 @@ TEAM = [
      "foto": "anggota5.jpg"},
 ]
 
-ACCURACY = [
-    {"kelas": "Hard_hat",     "sub": "Helm Keselamatan",   "p": 95.3, "r": 92.7, "map50": 97.0, "map": 76.3},
-    {"kelas": "Vest",         "sub": "Rompi High-Vis",     "p": 91.8, "r": 91.4, "map50": 96.4, "map": 76.1},
-    {"kelas": "Person",       "sub": "Kru Lapangan",       "p": 91.4, "r": 91.3, "map50": 97.0, "map": 76.0},
-    {"kelas": "Safety_boots", "sub": "Sepatu Safety",      "p": 87.3, "r": 76.7, "map50": 85.2, "map": 48.6},
-    {"kelas": "Gloves",       "sub": "Sarung Tangan",      "p": 80.9, "r": 85.9, "map50": 84.9, "map": 50.2},
-    {"kelas": "Mask",         "sub": "Masker / Respirator","p": 80.0, "r": 80.2, "map50": 80.1, "map": 48.7},
+# ---------- Perbandingan Model ----------
+MODEL_COMPARISON = [
+    {"nama": "YOLOv8n FP32 Baseline", "p": 89.42, "r": 79.72, "f1": 84.29,
+     "map50": 86.04, "map": 57.62, "size": 5.96, "best": True},
+    {"nama": "YOLOv8n INT8 ONNX",     "p": 89.52, "r": 77.52, "f1": 83.09,
+     "map50": 79.22, "map": 53.08, "size": 3.27, "best": False},
+    {"nama": "YOLOv8n Pruned",        "p": 88.54, "r": 77.46, "f1": 82.63,
+     "map50": 84.69, "map": 56.07, "size": 5.99, "best": False},
 ]
-ACCURACY_AVG = {"p": 87.8, "r": 86.4, "map50": 90.1, "map": 62.6}
 
-# ---- Load ONNX sekali (bukan ultralytics) ----
-session    = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
-INPUT_NAME = session.get_inputs()[0].name
+# ---------- Akurasi per kelas (dari model terbaik) ----------
+ACCURACY = [
+    {"kelas": "Mask",        "sub": "Masker / Respirator", "p": 93.5, "r": 89.8, "map50": 94.1, "map": 64.7},
+    {"kelas": "Helmet",      "sub": "Helm Keselamatan",    "p": 91.9, "r": 78.4, "map50": 83.9, "map": 54.8},
+    {"kelas": "Safety Vest", "sub": "Rompi High-Vis",      "p": 90.9, "r": 76.3, "map50": 83.8, "map": 60.0},
+    {"kelas": "boots",       "sub": "Sepatu Safety",       "p": 82.1, "r": 78.2, "map50": 85.4, "map": 56.7},
+    {"kelas": "glove",       "sub": "Sarung Tangan",       "p": 88.7, "r": 75.9, "map50": 83.0, "map": 51.9},
+]
+ACCURACY_AVG = {"p": 89.4, "r": 79.7, "map50": 86.0, "map": 57.6}
+
+# ---------- Load ONNX ----------
+session     = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+INPUT_NAME  = session.get_inputs()[0].name
 OUTPUT_NAME = session.get_outputs()[0].name
-INPUT_SIZE = 640
+INPUT_SIZE  = 640
 
 
 # ---------- DB ----------
@@ -121,7 +130,7 @@ def save_analysis(area, img, res, total, comp, viol):
     conn.commit(); conn.close()
 
 
-# ---------- ONNX Inference ----------
+# ---------- Preprocess ----------
 def preprocess(image_path):
     img = Image.open(image_path).convert("RGB")
     ow, oh = img.size
@@ -133,10 +142,11 @@ def preprocess(image_path):
     canvas.paste(img.resize((nw, nh)), (px, py))
 
     arr = np.array(canvas, dtype=np.float32) / 255.0
-    arr = arr.transpose(2, 0, 1)[None, ...]  # NCHW
+    arr = arr.transpose(2, 0, 1)[None, ...]
     return arr, img, scale, px, py
 
 
+# ---------- NMS ----------
 def compute_iou(box, boxes):
     x1 = np.maximum(box[0], boxes[:, 0]); y1 = np.maximum(box[1], boxes[:, 1])
     x2 = np.minimum(box[2], boxes[:, 2]); y2 = np.minimum(box[3], boxes[:, 3])
@@ -162,16 +172,72 @@ def nms(xyxy, scores, class_ids, iou_thr):
     return keep_all
 
 
-def decode(raw, ow, oh, scale, px, py, conf_thr=0.35, iou_thr=0.45):
-    preds = raw[0]           # [4+nc, 8400]
+def decode(raw, ow, oh, scale, px, py, conf_thr=0.25, iou_thr=0.45):
+    """
+    Format output model: (1, 300, 6) = [x1, y1, x2, y2, confidence, class_id]
+    Model sudah include NMS.
+    """
+    preds = raw[0] if raw.ndim == 3 else raw  # (300, 6)
+
+    if preds.shape[1] != 6:
+        # Fallback: format lama (jika model berubah)
+        return _decode_legacy(raw, ow, oh, scale, px, py, conf_thr, iou_thr)
+
+    confs = preds[:, 4]
+    class_ids = preds[:, 5].astype(int)
+
+    # Filter by confidence
+    mask = confs > conf_thr
+    if not mask.any():
+        return []
+
+    xyxy = preds[mask, :4].copy()
+    confs = confs[mask]
+    class_ids = class_ids[mask]
+
+    # Reverse letterbox: dari space 640 → gambar asli
+    xyxy[:, [0, 2]] = (xyxy[:, [0, 2]] - px) / scale
+    xyxy[:, [1, 3]] = (xyxy[:, [1, 3]] - py) / scale
+    xyxy[:, [0, 2]] = np.clip(xyxy[:, [0, 2]], 0, ow)
+    xyxy[:, [1, 3]] = np.clip(xyxy[:, [1, 3]], 0, oh)
+
+    # Filter bbox valid (x1 < x2, y1 < y2)
+    valid = (xyxy[:, 0] < xyxy[:, 2]) & (xyxy[:, 1] < xyxy[:, 3])
+    xyxy = xyxy[valid]
+    confs = confs[valid]
+    class_ids = class_ids[valid]
+
+    # Filter class_id valid (0..len(CLASS_NAMES)-1)
+    valid_cls = (class_ids >= 0) & (class_ids < len(CLASS_NAMES))
+    xyxy = xyxy[valid_cls]
+    confs = confs[valid_cls]
+    class_ids = class_ids[valid_cls]
+
+    return [
+        {"class": CLASS_NAMES[int(class_ids[i])],
+         "conf":  float(confs[i]),
+         "bbox":  [float(v) for v in xyxy[i]]}
+        for i in range(len(confs))
+    ]
+
+
+def _decode_legacy(raw, ow, oh, scale, px, py, conf_thr, iou_thr):
+    """Fallback untuk format YOLOv8 standar [4+nc, 8400]."""
+    preds = raw[0] if raw.ndim == 3 else raw
     nc = len(CLASS_NAMES)
-    boxes  = preds[:4, :]
-    scores = preds[4:4+nc, :]
+
+    if preds.shape[0] < preds.shape[1]:
+        boxes  = preds[:4, :]
+        scores = preds[4:4+nc, :]
+    else:
+        boxes  = preds[:, :4].T
+        scores = preds[:, 4:4+nc].T
 
     class_ids = np.argmax(scores, axis=0)
     confs     = np.max(scores, axis=0)
     mask = confs > conf_thr
-    if not mask.any(): return []
+    if not mask.any():
+        return []
 
     boxes, class_ids, confs = boxes[:, mask].T, class_ids[mask], confs[mask]
 
@@ -195,72 +261,74 @@ def decode(raw, ow, oh, scale, px, py, conf_thr=0.35, iou_thr=0.45):
     ]
 
 
+# ---------- Drawing ----------
 def draw_boxes(img, detections):
     draw = ImageDraw.Draw(img)
+    font_size = max(16, min(28, img.width // 40))
+    try:
+        font = ImageFont.truetype("arial.ttf", font_size)
+    except (OSError, IOError):
+        try:
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+        except (OSError, IOError):
+            font = ImageFont.load_default()
+
     for d in detections:
         x1, y1, x2, y2 = d["bbox"]
         color = COLORS.get(d["class"], (255, 255, 255))
+        label = f'{d["class"]} {d["conf"]*100:.0f}%'
+
         draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
-        draw.text((x1 + 4, max(0, y1 - 14)),
-                  f'{d["class"]} {d["conf"]*100:.0f}%', fill=color)
+
+        bbox = draw.textbbox((0, 0), label, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        ly = max(0, y1 - th - 8)
+        draw.rectangle([x1, ly, x1 + tw + 12, ly + th + 8], fill=color)
+        draw.text((x1 + 6, ly + 4), label, fill="white", font=font)
     return img
 
 
-# ---------- Logic ----------
-def iou(a, b):
-    x1, y1 = max(a[0], b[0]), max(a[1], b[1])
-    x2, y2 = min(a[2], b[2]), min(a[3], b[3])
-    inter = max(0, x2 - x1) * max(0, y2 - y1)
-    A = (a[2]-a[0])*(a[3]-a[1]); B = (b[2]-b[0])*(b[3]-b[1])
-    return inter / (A + B - inter + 1e-9)
-
-
-def pt_in(px, py, b):
-    return b[0] <= px <= b[2] and b[1] <= py <= b[3]
-
-
-def analyze_image(image_path):
+# ---------- Analyze ----------
+def analyze_image(image_path, conf_thr=0.25):
     inp, orig_img, scale, px, py = preprocess(image_path)
     raw = session.run([OUTPUT_NAME], {INPUT_NAME: inp})[0]
-    detections = decode(raw, orig_img.width, orig_img.height, scale, px, py)
+    all_dets = decode(raw, orig_img.width, orig_img.height,
+                      scale, px, py, conf_thr=conf_thr)
 
-    persons = [d for d in detections if d["class"] == "Person"]
-    ppes    = [d for d in detections if d["class"] != "Person"]
+    # Ambil confidence tertinggi per kelas
+    best = {}
+    for d in all_dets:
+        k = d["class"]
+        if k not in best or d["conf"] > best[k]["conf"]:
+            best[k] = d
 
-    persons.sort(key=lambda p: p["bbox"][0])
-    for i, p in enumerate(persons):
-        p["number"] = i + 1
-        p["ppe"] = {}
+    # Status tiap APD wajib
+    ppe_status = []
+    for req in REQUIRED_PPE:
+        if req in best:
+            ppe_status.append({"name": req, "detected": True, "conf": best[req]["conf"]})
+        else:
+            ppe_status.append({"name": req, "detected": False, "conf": 0.0})
 
-    for ppe in ppes:
-        cx = (ppe["bbox"][0] + ppe["bbox"][2]) / 2
-        cy = (ppe["bbox"][1] + ppe["bbox"][3]) / 2
-        best, bs = None, 0
-        for p in persons:
-            s = 1.0 if pt_in(cx, cy, p["bbox"]) else iou(ppe["bbox"], p["bbox"])
-            if s > bs and s > 0.3:
-                best, bs = p, s
-        if best is not None:
-            k = ppe["class"]
-            if k not in best["ppe"] or ppe["conf"] > best["ppe"][k]["conf"]:
-                best["ppe"][k] = ppe
+    detected_count = sum(1 for p in ppe_status if p["detected"])
+    missing_count  = len(REQUIRED_PPE) - detected_count
 
-    for p in persons:
-        miss = [r_ for r_ in REQUIRED_PPE if r_ not in p["ppe"]]
-        p["violations"] = miss
-        p["status"] = "COMPLIANT" if not miss else "NON-COMPLIANT"
-
-    result_img = draw_boxes(orig_img.copy(), detections)
+    result_img = draw_boxes(orig_img.copy(), all_dets)
     res_name = f"{uuid.uuid4().hex[:8]}.jpg"
     result_img.save(os.path.join(RESULT_DIR, res_name), quality=85)
 
-    total = len(persons)
-    comp = sum(1 for p in persons if p["status"] == "COMPLIANT")
-    return {"persons": persons, "total_person": total, "total_compliant": comp,
-            "total_violation": total - comp, "result_name": res_name}
+    return {
+        "ppe_status":     ppe_status,
+        "total_detected": detected_count,
+        "total_required": len(REQUIRED_PPE),
+        "total_missing":  missing_count,
+        "result_name":    res_name,
+        "conf_used":      conf_thr,
+    }
 
 
-# ---------- Static files dari /tmp ----------
+# ---------- Static files ----------
 @app.route("/uploads/<path:filename>")
 def serve_upload(filename):
     return send_from_directory(UPLOAD_DIR, filename)
@@ -275,7 +343,9 @@ def serve_result(filename):
 def render(result=None):
     return render_template("index.html",
         team=TEAM, samples=SAMPLES, required=REQUIRED_PPE,
-        accuracy=ACCURACY, acc_avg=ACCURACY_AVG, result=result)
+        accuracy=ACCURACY, acc_avg=ACCURACY_AVG,
+        model_comparison=MODEL_COMPARISON,
+        result=result)
 
 
 @app.route("/")
@@ -288,35 +358,34 @@ def analyze_upload():
     f = request.files.get("image")
     if not f or f.filename == "":
         return redirect(url_for("home"))
+    conf_thr = float(request.form.get("conf", 0.25))
     ext = os.path.splitext(f.filename)[1].lower() or ".jpg"
     name = f"{uuid.uuid4().hex[:8]}{ext}"
     path = os.path.join(UPLOAD_DIR, name)
     f.save(path)
-    r = analyze_image(path)
+    r = analyze_image(path, conf_thr)
     r["image_name"] = name
-    r["area"] = "-"
     save_analysis("-", name, r["result_name"],
-                  r["total_person"], r["total_compliant"], r["total_violation"])
+                  r["total_detected"], r["total_detected"], r["total_missing"])
     return render(r)
 
 
-@app.route("/try/<sample_file>")
+@app.route("/try/<sample_file>", methods=["POST"])
 def try_sample(sample_file):
     src = os.path.join(SAMPLE_DIR, sample_file)
     if not os.path.exists(src):
         return redirect(url_for("home"))
+    conf_thr = float(request.form.get("conf", 0.25))
     name = f"{uuid.uuid4().hex[:8]}.jpg"
     dst = os.path.join(UPLOAD_DIR, name)
     shutil.copy(src, dst)
-    r = analyze_image(dst)
+    r = analyze_image(dst, conf_thr)
     r["image_name"] = name
-    r["area"] = "Sample"
     save_analysis("Sample", name, r["result_name"],
-                  r["total_person"], r["total_compliant"], r["total_violation"])
+                  r["total_detected"], r["total_detected"], r["total_missing"])
     return render(r)
 
 
-# Vercel butuh objek `app`, bukan app.run()
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
