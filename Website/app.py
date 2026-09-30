@@ -52,9 +52,9 @@ COLORS = {
 }
 
 SAMPLES = [
-    {"label": "Sample 01", "file": "sample1.jpg", "sub": "Rig Floor"},
-    {"label": "Sample 02", "file": "sample2.jpg", "sub": "Dermaga"},
-    {"label": "Sample 03", "file": "sample3.jpg", "sub": "Kilang"},
+    {"label": "Sample 01", "file": "sample1.jpg"},
+    {"label": "Sample 02", "file": "sample2.jpg"},
+    {"label": "Sample 03", "file": "sample3.jpg"},
 ]
 
 TEAM = [
