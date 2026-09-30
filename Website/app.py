@@ -30,14 +30,30 @@ SAMPLE_DIR = os.path.join(STATIC_DIR, "samples")
 MODEL_PATH = os.path.join(BASE_DIR, "best_model.onnx")
 
 
+# ---------- Helper (definisi DULU) ----------
 def ensure_dir(p):
     if os.path.exists(p) and not os.path.isdir(p):
         os.remove(p)
     os.makedirs(p, exist_ok=True)
 
 
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            area TEXT, image_path TEXT, result_path TEXT,
+            total_person INTEGER, total_compliant INTEGER, total_violation INTEGER,
+            created_at TEXT
+        )
+    """)
+    conn.commit(); conn.close()
+
+
+# ---------- Panggil SETELAH definisi ----------
 ensure_dir(UPLOAD_DIR)
 ensure_dir(RESULT_DIR)
+init_db()
 
 # ---------- Kelas (urutan HARUS sama dengan model ONNX) ----------
 CLASS_NAMES  = ["Helmet", "Mask", "Safety Vest", "boots", "glove"]
@@ -106,22 +122,8 @@ INPUT_NAME  = session.get_inputs()[0].name
 OUTPUT_NAME = session.get_outputs()[0].name
 INPUT_SIZE  = 640
 
-
-# ---------- DB ----------
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS analysis (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            area TEXT, image_path TEXT, result_path TEXT,
-            total_person INTEGER, total_compliant INTEGER, total_violation INTEGER,
-            created_at TEXT
-        )
-    """)
-    conn.commit(); conn.close()
-
-
 def save_analysis(area, img, res, total, comp, viol):
+    init_db()   # ← jaring pengaman
     conn = sqlite3.connect(DB_PATH)
     conn.execute(
         "INSERT INTO analysis (area,image_path,result_path,total_person,total_compliant,total_violation,created_at) VALUES (?,?,?,?,?,?,?)",
@@ -387,5 +389,4 @@ def try_sample(sample_file):
 
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, port=5000)
